@@ -8,7 +8,42 @@
 ## Usage
 
 ```hcl
+module "redis_cache" {
+    source = "./"
+    name   = "redis5"
+    family = "redis5.0"
+    parameter_group_parameters = [
+    {
+        name  = "activerehashing"
+        value = "yes"
+    },
+    {
+        name  = "cluster-enabled"
+        value = "yes"
+    }
+    ]
+    subnet_ids = ["subnet-******","subnet-******","subnet-******"]
+    vpc_id = "vpc-****"
 
+    allowed_security_groups = [
+    "sg-******"
+    ]
+    allowed_cidr_blocks = [
+    "10.0.0.0/16"
+    ]
+    replication_group_id          = "redis-test"
+    replication_group_description = "test redis cluster"
+    node_type                     = "cache.t2.medium"
+
+    availability_zones                   = ["us-west-2a", "us-west-2b", "us-west-2c"]
+    automatic_failover_enabled           = true
+    engine                               = "redis"
+    engine_version                       = "5.0.6"
+    cluster_mode_enabled                 = true
+    cluster_mode_replicas_per_node_group = 2
+    cluster_mode_num_node_groups         = 3
+  
+}
 ```
 <!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 ## Requirements
@@ -38,6 +73,7 @@
 | cluster\_mode\_enabled | Flag to enable/disable creation of a native redis cluster. `automatic_failover_enabled` must be set to `true`. Only 1 `cluster_mode` block is allowed | `bool` | `false` | no |
 | cluster\_mode\_num\_node\_groups | Number of node groups (shards) for this Redis replication group. Changing this number will trigger an online resizing operation before other settings modifications | `number` | `0` | no |
 | cluster\_mode\_replicas\_per\_node\_group | Number of replica nodes in each node group. Valid values are 0 to 5. Changing this number will force a new resource | `number` | `0` | no |
+| cluster\_size | Number of nodes in cluster. \*Ignored when `cluster_mode_enabled` == `true`\* | `number` | `1` | no |
 | enabled | Do you want to create elastic cache service | `bool` | `true` | no |
 | engine | (Optional) The name of the cache engine to be used for the clusters in this replication group. e.g. redis | `string` | `"redis"` | no |
 | engine\_version | (Optional) The version number of the cache engine to be used for the cache clusters in this replication group. | `string` | `null` | no |
@@ -48,9 +84,9 @@
 | name | Name of the cluster | `string` | n/a | yes |
 | node\_type | (Required) The compute and memory capacity of the nodes in the node group. | `string` | `null` | no |
 | notification\_topic\_arn | (Optional) An Amazon Resource Name (ARN) of an SNS topic to send ElastiCache notifications to. Example: arn:aws:sns:us-east-1:012345678999:my\_sns\_topic | `string` | `null` | no |
-| number\_cache\_clusters | (Required for Cluster Mode Disabled) The number of cache clusters (primary and replicas) this replication group will have. If Multi-AZ is enabled, the value of this parameter must be at least 2. Updates will occur before other modifications. | `string` | `null` | no |
+| number\_cache\_clusters | (Required for Cluster Mode Disabled) The number of cache clusters (primary and replicas) this replication group will have. If Multi-AZ is enabled, the value of this parameter must be at least 2. Updates will occur before other modifications. | `number` | `0` | no |
 | parameter\_group\_description | (Optional) The description of the ElastiCache parameter group. Defaults to 'Managed by Terraform'. | `string` | `"Managed by Terraform"` | no |
-| parameter\_group\_name | (Optional) The name of the parameter group to associate with this replication group. If this argument is omitted, the default cache parameter group for the specified engine is used. | `string` | `null` | no |
+| parameter\_group\_name | (Optional) The name of the parameter group to associate with this replication group. If this argument is omitted, the default cache parameter group for the specified engine is used. | `string` | `""` | no |
 | parameter\_group\_parameters | (Required) The name of the ElastiCache parameter group. | <pre>list(object({<br>    name  = string<br>    value = string<br>  }))</pre> | `[]` | no |
 | port | (Optional) The port number on which each of the cache nodes will accept connections. For Memcache the default is 11211, and for Redis the default port is 6379. | `number` | `6379` | no |
 | profile | n/a | `string` | `"default"` | no |
@@ -59,8 +95,8 @@
 | replication\_group\_id | (Required) The replication group identifier. This parameter is stored as a lowercase string | `string` | n/a | yes |
 | security\_group\_ids | (Optional) One or more Amazon VPC security groups associated with this replication group. Use this parameter only when you are creating a replication group in an Amazon Virtual Private Cloud | `list(string)` | `[]` | no |
 | shared\_credentials\_file | n/a | `string` | `"/Users/rajeev/.aws/credentials"` | no |
-| snapshot\_arns | (Optional) A single-element string list containing an Amazon Resource Name (ARN) of a Redis RDB snapshot file stored in Amazon S3. Example: arn:aws:s3:::my\_bucket/snapshot1.rdb | `string` | `null` | no |
-| snapshot\_name | (Optional) The name of a snapshot from which to restore data into the new node group. Changing the snapshot\_name forces a new resource. | `string` | `null` | no |
+| snapshot\_arns | (Optional) A single-element string list containing an Amazon Resource Name (ARN) of a Redis RDB snapshot file stored in Amazon S3. Example: arn:aws:s3:::my\_bucket/snapshot1.rdb | `string` | `""` | no |
+| snapshot\_name | (Optional) The name of a snapshot from which to restore data into the new node group. Changing the snapshot\_name forces a new resource. | `string` | `""` | no |
 | snapshot\_retention\_limit | The number of days for which ElastiCache will retain automatic cache cluster snapshots before deleting them. | `number` | `0` | no |
 | snapshot\_window | The daily time range (in UTC) during which ElastiCache will begin taking a daily snapshot of your cache cluster. | `string` | `"06:30-07:30"` | no |
 | subnet\_group\_description | (Optional) Description for the cache subnet group. Defaults to 'Managed by Terraform'. | `string` | `"Managed by Terraform"` | no |
@@ -75,7 +111,12 @@
 
 | Name | Description |
 |------|-------------|
+| configuration\_endpoint\_address | The address of the replication group configuration endpoint when cluster mode is enabled. |
+| id | The ID of the ElastiCache Replication Group |
+| member\_clusters | The identifiers of all the nodes that are part of this replication group. |
 | parameter\_group\_id | The ElastiCache parameter group name. |
+| primary\_endpoint\_address | (Redis only) The address of the endpoint for the primary node in the replication group, if the cluster mode is disabled. |
+| security\_group\_id | Security group ID |
 
 <!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 
