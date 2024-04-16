@@ -1,9 +1,8 @@
-variable "enabled" {
+variable "create" {
   type        = bool
-  description = "Do you want to create elastic cache service"
+  description = "(Optional) Do you want to create elastic cache service default is true"
   default     = true
 }
-
 
 variable "name" {
   type        = string
@@ -14,7 +13,15 @@ variable "family" {
   type        = string
   description = "The family of the ElastiCache parameter group."
 }
-############# Par
+
+############# Parameter Group ########
+
+variable "create_parameter_group" {
+  type        = bool
+  description = "(Optional) Do you want to create a parameter group for the ElastiCache cluster. Defaults to true."
+  default     = false
+}
+
 variable "parameter_group_description" {
   type        = string
   description = "(Optional) The description of the ElastiCache parameter group. Defaults to 'Managed by Terraform'."
@@ -26,12 +33,16 @@ variable "parameter_group_parameters" {
     name  = string
     value = string
   }))
-  description = "(Required) The name of the ElastiCache parameter group."
-  default = [
-
-  ]
+  description = <<_EOT
+  A list of parameter names and values that will be used in the parameter group.
+  - name: The name of the parameter.
+  - value: The value of the parameter.
+  _EOT
+  default     = []
 }
+
 ########## Subnet Groups #####
+
 variable "subnet_group_description" {
   type        = string
   description = "(Optional) Description for the cache subnet group. Defaults to 'Managed by Terraform'."
@@ -43,8 +54,8 @@ variable "subnet_ids" {
   description = "(Required) List of VPC Subnet IDs for the cache subnet group"
 }
 
-
 ########## Security Groups #######
+
 variable "use_existing_security_groups" {
   type        = bool
   description = "description"
@@ -75,9 +86,7 @@ variable "existing_security_groups" {
   description = "List of existing Security Group IDs to place the cluster into. Set `use_existing_security_groups` to `true` to enable using `existing_security_groups` as Security Groups for the cluster"
 }
 
-
-
-########### Tags 
+########### Tags  ##########
 
 variable "tags" {
   type        = map(string)
@@ -87,17 +96,11 @@ variable "tags" {
   }
 }
 
-
 ######## Elastic Cache #######
-
-variable "replication_group_id" {
-  type        = string
-  description = "(Required) The replication group identifier. This parameter is stored as a lowercase string"
-}
 
 variable "replication_group_description" {
   type        = string
-  description = "(Required) A user-created description for the replication group."
+  description = "Required) User-created description for the replication group. Must not be empty."
 }
 
 variable "number_cache_clusters" {
@@ -105,7 +108,6 @@ variable "number_cache_clusters" {
   description = " (Required for Cluster Mode Disabled) The number of cache clusters (primary and replicas) this replication group will have. If Multi-AZ is enabled, the value of this parameter must be at least 2. Updates will occur before other modifications."
   default     = 0
 }
-
 
 variable "cluster_size" {
   type        = number
@@ -115,7 +117,19 @@ variable "cluster_size" {
 
 variable "node_type" {
   type        = string
-  description = "(Required) The compute and memory capacity of the nodes in the node group."
+  description = "(Optional) Instance class to be used. See AWS documentation for information on supported node types and guidance on selecting node types. Required unless global_replication_group_id is set. Cannot be set if global_replication_group_id is set."
+  default     = null
+}
+
+variable "num_cache_clusters" {
+  type        = number
+  description = "(Optional) Number of cache clusters (primary and replicas) this replication group will have. If Multi-AZ is enabled, the value of this parameter must be at least 2. Updates will occur before other modifications. Conflicts with num_node_groups. Defaults to 1."
+  default     = 1
+}
+
+variable "num_node_groups" {
+  type        = number
+  description = "(Optional) Number of node groups (shards) for this Redis replication group. Changing this number will trigger a resizing operation before other settings modifications."
   default     = null
 }
 
@@ -131,6 +145,12 @@ variable "auto_minor_version_upgrade" {
   default     = true
 }
 
+variable "data_tiering_enabled" {
+  type        = bool
+  description = "(Optional) Enables data tiering. Data tiering is only supported for replication groups using the r6gd node type. This parameter must be set to true when using r6gd nodes."
+  default     = false
+}
+
 variable "availability_zones" {
   type        = list(string)
   description = "(Optional) A list of EC2 availability zones in which the replication group's cache clusters will be created. The order of the availability zones in the list is not important."
@@ -139,15 +159,11 @@ variable "availability_zones" {
   ]
 }
 
-
 variable "engine" {
   type        = string
   description = "(Optional) The name of the cache engine to be used for the clusters in this replication group. e.g. redis"
   default     = "redis"
 }
-
-
-
 
 variable "at_rest_encryption_enabled" {
   type        = bool
@@ -163,8 +179,38 @@ variable "transit_encryption_enabled" {
 
 variable "auth_token" {
   type        = string
-  description = " (Optional) The password used to access a password protected server. Can be specified only if transit_encryption_enabled = true"
+  description = "(Optional) The password used to access a password protected server. Can be specified only if transit_encryption_enabled = true"
   default     = null
+}
+
+variable "auth_token_update_strategy" {
+  type        = string
+  description = "(Optional) Strategy to use when updating the auth_token. Valid values are SET, ROTATE, and DELETE. Defaults to ROTATE."
+  default     = "ROTATE"
+}
+
+variable "engine_version" {
+  type        = string
+  description = "(Optional) The version number of the cache engine to be used for the cache clusters in this replication group."
+  default     = null
+}
+
+variable "final_snapshot_identifier" {
+  type        = string
+  description = "(Optional) The name of your final node group (shard) snapshot. ElastiCache creates the snapshot from the primary node in the cluster. If omitted, no final snapshot will be made."
+  default     = null
+}
+
+variable "global_replication_group_id" {
+  type        = string
+  description = "(Optional) The ID of the global replication group to which this replication group should belong. If this parameter is specified, the replication group is added to the specified global replication group as a secondary replication group; otherwise, the replication group is not part of any global replication group. If global_replication_group_id is set, the num_node_groups parameter cannot be set."
+  default     = null
+}
+
+variable "ip_discovery" {
+  type        = string
+  description = "(Optional) The IP version to advertise in the discovery protocol. Valid values are ipv4 or ipv6."
+  default     = "ipv4"
 }
 
 variable "kms_key_id" {
@@ -173,10 +219,39 @@ variable "kms_key_id" {
   default     = null
 }
 
-variable "engine_version" {
+variable "log_delivery_configuration" {
+  type = list(object({
+    destination      = string
+    destination_type = string
+    log_format       = string
+    log_type         = string
+  }))
+  description = <<_EOT
+  A list of log delivery configurations for the replication group.
+  - destination: The name of the S3 bucket to which the log data is written.
+  - destination_type: The type of destination (currently only S3 is supported).
+  - log_format: The log format to use. Valid values are json or text.
+  - log_type: The type of log to deliver. Valid values are slowlog or error.
+  _EOT
+  default     = []
+}
+
+variable "maintenance_window" {
   type        = string
-  description = "(Optional) The version number of the cache engine to be used for the cache clusters in this replication group."
-  default     = null
+  description = "(Optional) Specifies the weekly time range for when maintenance on the cache cluster is performed. The format is ddd:hh24:mi-ddd:hh24:mi (24H Clock UTC). The minimum maintenance window is a 60 minute period. Example: sun:05:00-sun:09:00"
+  default     = "wed:03:00-wed:04:00"
+}
+
+variable "multi_az_enabled" {
+  type        = bool
+  description = "(Optional) Specifies whether to enable Multi-AZ Support for the replication group. If true, automatic_failover_enabled must also be enabled. Defaults to false."
+  default     = false
+}
+
+variable "network_type" {
+  type        = string
+  description = "(Optional) The IP versions for cache cluster connections. Valid values are ipv4, ipv6 or dual_stack."
+  default     = "ipv4"
 }
 
 variable "parameter_group_name" {
@@ -189,6 +264,12 @@ variable "port" {
   type        = number
   description = "(Optional) The port number on which each of the cache nodes will accept connections. For Memcache the default is 11211, and for Redis the default port is 6379."
   default     = 6379
+}
+
+variable "replicas_per_node_group" {
+  type        = number
+  description = "(Optional) Number of replica nodes in each node group. Changing this number will trigger a resizing operation before other settings modifications. Valid values are 0 to 5."
+  default     = null
 }
 
 variable "subnet_group_name" {
@@ -206,23 +287,16 @@ variable "security_group_ids" {
 }
 
 variable "snapshot_arns" {
-  type        = string
+  type        = list(string)
   description = "(Optional) A single-element string list containing an Amazon Resource Name (ARN) of a Redis RDB snapshot file stored in Amazon S3. Example: arn:aws:s3:::my_bucket/snapshot1.rdb"
-  default     = ""
+  default     = null
 }
 
 variable "snapshot_name" {
   type        = string
   description = "(Optional) The name of a snapshot from which to restore data into the new node group. Changing the snapshot_name forces a new resource."
-  default     = ""
+  default     = null
 }
-
-variable "maintenance_window" {
-  type        = string
-  description = "(Optional) Specifies the weekly time range for when maintenance on the cache cluster is performed. The format is ddd:hh24:mi-ddd:hh24:mi (24H Clock UTC). The minimum maintenance window is a 60 minute period. Example: sun:05:00-sun:09:00"
-  default     = "wed:03:00-wed:04:00"
-}
-
 
 variable "notification_topic_arn" {
   type        = string
@@ -244,25 +318,25 @@ variable "snapshot_retention_limit" {
 
 variable "apply_immediately" {
   type        = bool
-  description = "Apply changes immediately"
-  default     = true
-
+  description = "(Optional) Specifies whether any modifications are applied immediately, or during the next maintenance window. Default is false."
+  default     = false
 }
 
 variable "cluster_mode_enabled" {
   type        = bool
-  description = "Flag to enable/disable creation of a native redis cluster. `automatic_failover_enabled` must be set to `true`. Only 1 `cluster_mode` block is allowed"
+  description = "(Optional) Flag to enable/disable creation of a native redis cluster. `automatic_failover_enabled` must be set to `true`. Only 1 `cluster_mode` block is allowed"
   default     = false
 }
 
-variable "cluster_mode_replicas_per_node_group" {
-  type        = number
-  description = "Number of replica nodes in each node group. Valid values are 0 to 5. Changing this number will force a new resource"
-  default     = 0
+variable "user_group_ids" {
+  type        = list(string)
+  description = "(Optional) User Group ID to associate with the replication group. Only a maximum of one (1) user group ID is valid. NOTE: This argument is a set because the AWS specification allows for multiple IDs. However, in practice, AWS only allows a maximum size of one."
+  default     = null
 }
 
-variable "cluster_mode_num_node_groups" {
-  type        = number
-  description = "Number of node groups (shards) for this Redis replication group. Changing this number will trigger an online resizing operation before other settings modifications"
-  default     = 0
+### VPC Endpoint ####
+variable "create_vpc_endpoint" {
+  type        = bool
+  description = "(optional) Do you want to create VPC endpoint for ElastiCache default is false"
+  default     = false
 }
