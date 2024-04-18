@@ -4,10 +4,10 @@ name: Static security analysis for Terraform
 on:
   push:
     branches:
-    - master
+    - main
   pull_request:
     branches:
-    - master
+    - main
 jobs:
   checkov-job:
     runs-on: ubuntu-latest
